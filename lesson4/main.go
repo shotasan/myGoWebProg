@@ -17,8 +17,10 @@ func setCookie(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 	}
 	fmt.Printf("Type: %T", c1)
-	w.Header().Set("Set-Cookie", c1.String())
-	w.Header().Add("Set-Cookie", c2.String())
+	// w.Header().Set("Set-Cookie", c1.String())
+	// w.Header().Add("Set-Cookie", c2.String())
+	http.SetCookie(w, &c1)
+	http.SetCookie(w, &c2)
 }
 
 func main() {
