@@ -1,46 +1,51 @@
 package main
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net/http"
+	"time"
 )
 
-func setCookie(w http.ResponseWriter, r *http.Request) {
-	c1 := http.Cookie{
-		Name:     "first_cookie",
-		Value:    "Go web Programming",
-		HttpOnly: true,
+func setMessage(w http.ResponseWriter, r *http.Request) {
+	msg := []byte("Hello World!")
+	for _, s := range msg {
+		fmt.Println(string(s))
 	}
-	c2 := http.Cookie{
-		Name:     "second_cookie",
-		Value:    "Mannig Co",
-		HttpOnly: true,
+	c := http.Cookie{
+		Name: "flash",
+		// スペースなどを処理するためbase64でエンコードする
+		Value: base64.URLEncoding.EncodeToString(msg),
 	}
-	fmt.Printf("cookie: %T\n", c1)
-	// w.Header().Set("Set-Cookie", c1.String())
-	// w.Header().Add("Set-Cookie", c2.String())
-	http.SetCookie(w, &c1)
-	http.SetCookie(w, &c2)
+	http.SetCookie(w, &c)
 }
 
 func showMessage(w http.ResponseWriter, r *http.Request) {
-	// 特定のクッキーを取得する
-	c1, err := r.Cookie("first_cookie")
+	// リクエストのクッキーからflashを探す
+	c, err := r.Cookie("flash")
 	if err != nil {
-		fmt.Fprintln(w, "Cannot get the first cookies")
+		if err == http.ErrNoCookie {
+			fmt.Fprintln(w, "メッセージがありません")
+		}
+	} else {
+		// 置き換えて直ぐに削除されるクッキーを用意する
+		rc := http.Cookie{
+			Name:    "flash",
+			MaxAge:  -1,
+			Expires: time.Unix(1, 0),
+		}
+		http.SetCookie(w, &rc)
+		// エンコードされていたvalueをデコードする
+		val, _ := base64.URLEncoding.DecodeString(c.Value)
+		fmt.Fprintln(w, string(val))
 	}
-	// すべてのクッキーを取得する
-	cs := r.Cookies()
-	fmt.Printf("r cookie: %T\n", cs)
-	fmt.Fprintln(w, c1)
-	fmt.Fprintln(w, cs)
 }
 
 func main() {
 	server := http.Server{
 		Addr: "127.0.0.1:8080",
 	}
-	http.HandleFunc("/set_cookie", setCookie)
+	http.HandleFunc("/set_message", setMessage)
 	http.HandleFunc("/show_message", showMessage)
 	server.ListenAndServe()
 }
