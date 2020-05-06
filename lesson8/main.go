@@ -4,7 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
+	"path"
+	"strconv"
 )
 
 type Post struct {
@@ -56,6 +59,45 @@ func unmarshall(filename string) (post Post, err error) {
 		return
 	}
 	json.Unmarshal(jsonData, &post)
+	return
+}
+
+func handleRequest(w http.ResponseWriter, r *http.Request) {
+	var err error
+	switch r.Method {
+	case "GET":
+		err = handleGet(w, r)
+		// case "POST":
+		// 	err = handlePost(w, r)
+		// case "PUT":
+		// 	err = handlePut(w, r)
+		// case "DELETE":
+		// 	err = handleDelete(w, r)
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+func handleGet(w http.ResponseWriter, r *http.Request) (err error) {
+	// URLのパスを抽出し、関数path.Baseを使ってidを取得する
+	id, err := strconv.Atoi(path.Base(r.URL.Path))
+	if err != nil {
+		return
+	}
+	post, err := retrieve(id)
+	if err != nil {
+		return
+	}
+	// json.MarshalIndentで構造体postをJSONフォーマットのバイト列に変換する
+	output, err := json.MarshalIndent(&post, "", "\t\t")
+	if err != nil {
+		return
+	}
+	// ヘッダの設定とResponseWriterへの書き込み
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(output)
 	return
 }
 
